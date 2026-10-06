@@ -1,0 +1,815 @@
+{
+  "info": {
+    "_postman_id": "c71a3962-d392-48a8-b673-c157bb47842c",
+    "name": "Student Information Management System (SIMS) REST API",
+    "description": "Comprehensive REST API Client Collection covering Authentication, Students, Academic Programs, Courses, Academic Terms, Course Offerings, Enrollments, Grades, Academic Records, and OpenAPI Documentation. Includes positive and negative test cases according to Laboratory Requirements.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "1.1 Login - Administrator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "if (res.success && res.data && res.data.accessToken) {",
+                  "    pm.environment.set('accessToken', res.data.accessToken);",
+                  "    pm.environment.set('adminToken', res.data.accessToken);",
+                  "    console.log('Saved Admin Access Token');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.2 Login - Student (Alice)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "if (res.success && res.data && res.data.accessToken) {",
+                  "    pm.environment.set('studentToken', res.data.accessToken);",
+                  "    pm.environment.set('sampleStudentId', res.data.user.studentId);",
+                  "    console.log('Saved Student Access Token & ID');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.3 Login - Instructor (Prof. Alan Smith)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "if (res.success && res.data && res.data.accessToken) {",
+                  "    pm.environment.set('instructorToken', res.data.accessToken);",
+                  "    console.log('Saved Instructor Access Token');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructorEmail}}\",\n  \"password\": \"{{instructorPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.4 Get Current User Profile (/auth/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "1.5 User Logout (/auth/logout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        },
+        {
+          "name": "1.6 [Negative] Login with Invalid Password (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "const res = pm.response.json();",
+                  "pm.test('Success is false', () => pm.expect(res.success).to.be.false);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sims.edu\",\n  \"password\": \"WrongPassword!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.7 [Negative] Access Protected Endpoint without Token (Expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Students",
+      "item": [
+        {
+          "name": "2.1 List Students (Search Dela, Filter, Sort, Paginate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Has pagination metadata', () => {",
+                  "    pm.expect(res.meta.page).to.eql(1);",
+                  "    pm.expect(res.meta.limit).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students?page=1&per_page=10&search=dela&sort=last_name",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "10" },
+                { "key": "search", "value": "dela" },
+                { "key": "sort", "value": "last_name" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 Create Valid Student (Admin/Registrar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "    pm.environment.set('createdStudentId', res.data.id);",
+                  "    pm.environment.set('createdStudentNumber', res.data.studentNumber);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentNumber\": \"2026-99999\",\n  \"programId\": \"{{sampleProgramId}}\",\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Dela Cruz\",\n  \"email\": \"juan.delacruz999@sims.edu\",\n  \"yearLevel\": 1,\n  \"status\": \"ACTIVE\",\n  \"contactNumber\": \"+639171239999\",\n  \"address\": \"Sampaloc, Manila\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students", "host": ["{{baseUrl}}"], "path": ["students"] }
+          }
+        },
+        {
+          "name": "2.3 [Negative] Duplicate Student Number (Expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentNumber\": \"2026-00001\",\n  \"programId\": \"{{sampleProgramId}}\",\n  \"firstName\": \"Duplicate\",\n  \"lastName\": \"Student\",\n  \"email\": \"duplicate@sims.edu\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students", "host": ["{{baseUrl}}"], "path": ["students"] }
+          }
+        },
+        {
+          "name": "2.4 [Negative] Validation Failure - Invalid Email (Expect 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422 Unprocessable Content', () => pm.response.to.have.status(422));",
+                  "const res = pm.response.json();",
+                  "pm.test('Errors object is present', () => pm.expect(res.errors || res.error).to.be.ok);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentNumber\": \"2026-88888\",\n  \"programId\": \"{{sampleProgramId}}\",\n  \"firstName\": \"Invalid\",\n  \"lastName\": \"EmailUser\",\n  \"email\": \"not-a-valid-email-format\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students", "host": ["{{baseUrl}}"], "path": ["students"] }
+          }
+        },
+        {
+          "name": "2.5 Retrieve Student by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/students/{{sampleStudentId}}", "host": ["{{baseUrl}}"], "path": ["students", "{{sampleStudentId}}"] }
+          }
+        },
+        {
+          "name": "2.6 Update Student Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactNumber\": \"+639198887777\",\n  \"address\": \"Quezon City, Philippines\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students/{{sampleStudentId}}", "host": ["{{baseUrl}}"], "path": ["students", "{{sampleStudentId}}"] }
+          }
+        },
+        {
+          "name": "2.7 [Negative] Not Found Case (Expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 404 Not Found', () => pm.response.to.have.status(404));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/students/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["students", "00000000-0000-0000-0000-000000000000"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Academic Programs",
+      "item": [
+        {
+          "name": "3.1 List Programs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleProgramId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/programs?page=1&per_page=10&sort=code", "host": ["{{baseUrl}}"], "path": ["programs"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "10" }, { "key": "sort", "value": "code" }] }
+          }
+        },
+        {
+          "name": "3.2 Create Program (Admin / Registrar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"BSDS\",\n  \"name\": \"Bachelor of Science in Data Science\",\n  \"department\": \"Department of Computer Science\",\n  \"totalUnitsRequired\": 126\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/programs", "host": ["{{baseUrl}}"], "path": ["programs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Courses",
+      "item": [
+        {
+          "name": "4.1 List Courses with Prerequisites",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleCourseId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/courses?page=1&per_page=20&sort=code", "host": ["{{baseUrl}}"], "path": ["courses"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }, { "key": "sort", "value": "code" }] }
+          }
+        },
+        {
+          "name": "4.2 Create Course (Admin / Registrar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CS402\",\n  \"title\": \"Distributed Systems\",\n  \"description\": \"Distributed consensus, replication, RPC, and cloud microservices\",\n  \"units\": 3\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/courses", "host": ["{{baseUrl}}"], "path": ["courses"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Academic Terms",
+      "item": [
+        {
+          "name": "5.1 List Academic Terms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleTermId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/academic-terms", "host": ["{{baseUrl}}"], "path": ["academic-terms"] }
+          }
+        },
+        {
+          "name": "5.2 Create Academic Term (Admin / Registrar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"AY2027-2028-1S\",\n  \"name\": \"Academic Year 2027-2028 1st Semester\",\n  \"startDate\": \"2027-08-15T00:00:00.000Z\",\n  \"endDate\": \"2027-12-20T00:00:00.000Z\",\n  \"isEnrollmentOpen\": false,\n  \"isCurrent\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academic-terms", "host": ["{{baseUrl}}"], "path": ["academic-terms"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Course Offerings",
+      "item": [
+        {
+          "name": "6.1 List Course Offerings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleOfferingId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/course-offerings?page=1&per_page=10", "host": ["{{baseUrl}}"], "path": ["course-offerings"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "10" }] }
+          }
+        },
+        {
+          "name": "6.2 Create Course Offering (Admin / Registrar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{sampleCourseId}}\",\n  \"termId\": \"{{sampleTermId}}\",\n  \"sectionCode\": \"DEMO-SECTION-1\",\n  \"schedule\": \"MWF 01:00-02:00 PM\",\n  \"room\": \"Room 501\",\n  \"maxCapacity\": 40\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/course-offerings", "host": ["{{baseUrl}}"], "path": ["course-offerings"] }
+          }
+        },
+        {
+          "name": "6.3 Get Enrolled Students Roster",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/course-offerings/{{sampleOfferingId}}/students", "host": ["{{baseUrl}}"], "path": ["course-offerings", "{{sampleOfferingId}}", "students"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Enrollments",
+      "item": [
+        {
+          "name": "7.1 List Enrollments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleEnrollmentId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/enrollments", "host": ["{{baseUrl}}"], "path": ["enrollments"] }
+          }
+        },
+        {
+          "name": "7.2 Enroll Student in Offering",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{sampleStudentId}}\",\n  \"courseOfferingId\": \"{{sampleOfferingId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/enrollments", "host": ["{{baseUrl}}"], "path": ["enrollments"] }
+          }
+        },
+        {
+          "name": "7.3 [Negative] Prevent Duplicate Enrollment (Expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 409 Conflict', () => pm.response.to.have.status(409));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{sampleStudentId}}\",\n  \"courseOfferingId\": \"{{sampleOfferingId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/enrollments", "host": ["{{baseUrl}}"], "path": ["enrollments"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Grades",
+      "item": [
+        {
+          "name": "8.1 List Grades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "    pm.environment.set('sampleGradeId', res.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/grades", "host": ["{{baseUrl}}"], "path": ["grades"] }
+          }
+        },
+        {
+          "name": "8.2 Encode / Update Authorized Grade",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numericGrade\": 1.25,\n  \"midtermGrade\": 1.5,\n  \"finalGrade\": 1.25,\n  \"letterGrade\": \"A\",\n  \"remarks\": \"PASSED\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/grades/{{sampleGradeId}}", "host": ["{{baseUrl}}"], "path": ["grades", "{{sampleGradeId}}"] }
+          }
+        },
+        {
+          "name": "8.3 [Negative] Forbidden Grade Modification by Student (Expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 403 Forbidden', () => pm.response.to.have.status(403));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numericGrade\": 1.0\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/grades/{{sampleGradeId}}", "host": ["{{baseUrl}}"], "path": ["grades", "{{sampleGradeId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Academic Records",
+      "item": [
+        {
+          "name": "9.1 Retrieve Student Academic Record (Transcript & Cumulative GWA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Includes GWA calculation', () => {",
+                  "    pm.expect(res.data.academicProgress).to.be.an('object');",
+                  "    pm.expect(res.data.academicTerms).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/students/{{sampleStudentId}}/academic-record", "host": ["{{baseUrl}}"], "path": ["students", "{{sampleStudentId}}", "academic-record"] }
+          }
+        },
+        {
+          "name": "9.2 Retrieve Student Grades List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/students/{{sampleStudentId}}/grades", "host": ["{{baseUrl}}"], "path": ["students", "{{sampleStudentId}}", "grades"] }
+          }
+        },
+        {
+          "name": "9.3 [Negative] Object-Level Authorization - Student Accessing Other Student Record (Expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', () => pm.response.to.have.status(403));",
+                  "const res = pm.response.json();",
+                  "pm.test('Confidential access denied', () => pm.expect(res.success).to.be.false);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/students/00000000-0000-0000-0000-000000000001/academic-record", "host": ["{{baseUrl}}"], "path": ["students", "00000000-0000-0000-0000-000000000001", "academic-record"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. API Documentation",
+      "item": [
+        {
+          "name": "10.1 Get OpenAPI Specification JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/docs", "host": ["{{baseUrl}}"], "path": ["docs"] }
+          }
+        },
+        {
+          "name": "10.2 View Swagger UI (HTML)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/docs/ui", "host": ["{{baseUrl}}"], "path": ["docs", "ui"] }
+          }
+        }
+      ]
+    }
+  ]
+}
