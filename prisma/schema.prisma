@@ -1,0 +1,217 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMINISTRATOR
+  REGISTRAR
+  INSTRUCTOR
+  STUDENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  PROBATION
+  GRADUATED
+  DROPPED_OUT
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  DROPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum GradeRemark {
+  PASSED
+  FAILED
+  INCOMPLETE
+  DROPPED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  role         Role
+  firstName    String
+  lastName     String
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // 1-to-1 profile relations
+  studentProfile    Student?
+  instructorProfile Instructor?
+
+  // Audit relations
+  submittedGrades Grade[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Student {
+  id            String        @id @default(uuid())
+  studentNumber String        @unique
+  userId        String        @unique
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId     String
+  program       Program       @relation(fields: [programId], references: [id], onDelete: Restrict)
+  yearLevel     Int           @default(1)
+  status        StudentStatus @default(ACTIVE)
+  middleName    String?
+  suffix        String?
+  dateOfBirth   DateTime?
+  contactNumber String?
+  address       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  enrollments Enrollment[]
+
+  @@index([studentNumber])
+  @@index([programId])
+}
+
+model Instructor {
+  id             String           @id @default(uuid())
+  employeeNumber String           @unique
+  userId         String           @unique
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department     String
+  title          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  offerings CourseOffering[]
+
+  @@index([employeeNumber])
+}
+
+model Program {
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  name               String
+  department         String
+  totalUnitsRequired Int       @default(120)
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  students Student[]
+  courses  Course[]
+
+  @@index([code])
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  title       String
+  description String?
+  units       Int      @default(3)
+  programId   String?
+  program     Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  offerings     CourseOffering[]
+  prerequisites CoursePrerequisite[] @relation("CourseToPrerequisite")
+  requiredFor   CoursePrerequisite[] @relation("PrerequisiteToCourse")
+
+  @@index([code])
+}
+
+model CoursePrerequisite {
+  courseId       String
+  prerequisiteId String
+  course         Course   @relation("CourseToPrerequisite", fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisite   Course   @relation("PrerequisiteToCourse", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@id([courseId, prerequisiteId])
+}
+
+model AcademicTerm {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  name             String
+  startDate        DateTime
+  endDate          DateTime
+  isEnrollmentOpen Boolean  @default(false)
+  isCurrent        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  offerings CourseOffering[]
+
+  @@index([isCurrent])
+  @@index([isEnrollmentOpen])
+}
+
+model CourseOffering {
+  id           String       @id @default(uuid())
+  courseId     String
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  termId       String
+  term         AcademicTerm @relation(fields: [termId], references: [id], onDelete: Restrict)
+  instructorId String?
+  instructor   Instructor?  @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  sectionCode  String
+  schedule     String
+  room         String
+  maxCapacity  Int          @default(40)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  enrollments Enrollment[]
+
+  @@unique([courseId, termId, sectionCode])
+  @@index([termId])
+  @@index([instructorId])
+}
+
+model Enrollment {
+  id               String           @id @default(uuid())
+  studentId        String
+  student          Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseOfferingId String
+  courseOffering   CourseOffering   @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  status           EnrollmentStatus @default(ENROLLED)
+  enrolledAt       DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  grade Grade?
+
+  @@unique([studentId, courseOfferingId])
+  @@index([studentId])
+  @@index([courseOfferingId])
+}
+
+model Grade {
+  id            String      @id @default(uuid())
+  enrollmentId  String      @unique
+  enrollment    Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  numericGrade  Decimal?    @db.Decimal(4, 2)
+  midtermGrade  Decimal?    @db.Decimal(4, 2)
+  finalGrade    Decimal?    @db.Decimal(4, 2)
+  letterGrade   String?
+  remarks       GradeRemark @default(PASSED)
+  isFinalized   Boolean     @default(false)
+  submittedAt   DateTime?
+  submittedById String?
+  submittedBy   User?       @relation(fields: [submittedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([enrollmentId])
+}
