@@ -31,7 +31,11 @@ class ApiClient {
 
   private getToken(): string | null {
     try {
-      return localStorage.getItem("sims_auth_token");
+      const token = localStorage.getItem("sims_auth_token");
+      if (!token || token === "undefined" || token === "null" || token.trim() === "") {
+        return null;
+      }
+      return token;
     } catch {
       return null;
     }

@@ -32,7 +32,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [token, setToken] = useState<string | null>(() => {
     try {
-      return localStorage.getItem("sims_auth_token");
+      const saved = localStorage.getItem("sims_auth_token");
+      if (!saved || saved === "undefined" || saved === "null" || saved.trim() === "") {
+        return null;
+      }
+      return saved;
     } catch {
       return null;
     }
@@ -46,8 +50,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     async function checkAuth() {
       const storedToken = localStorage.getItem("sims_auth_token");
-      if (!storedToken) {
-        if (isMounted) setIsLoading(false);
+      if (!storedToken || storedToken === "undefined" || storedToken === "null" || storedToken.trim() === "") {
+        try {
+          localStorage.removeItem("sims_auth_token");
+          localStorage.removeItem("sims_user_profile");
+        } catch {
+          // ignore
+        }
+        if (isMounted) {
+          setUser(null);
+          setToken(null);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -90,9 +104,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const data = await authService.login(credentials);
-      setToken(data.token);
+      const authToken = data.token || (data as any).accessToken || "";
+      if (!authToken) {
+        throw new Error("No authentication token was returned by the server.");
+      }
+      setToken(authToken);
       setUser(data.user);
-      localStorage.setItem("sims_auth_token", data.token);
+      localStorage.setItem("sims_auth_token", authToken);
       localStorage.setItem("sims_user_profile", JSON.stringify(data.user));
       return data.user;
     } finally {

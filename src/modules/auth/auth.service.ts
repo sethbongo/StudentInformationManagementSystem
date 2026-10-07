@@ -41,6 +41,7 @@ export class AuthService {
 
     return {
       accessToken,
+      token: accessToken,
       user: {
         id: user.id,
         email: user.email,
@@ -142,6 +143,7 @@ export class AuthService {
 
     return {
       accessToken,
+      token: accessToken,
       user: {
         id: user.id,
         email: user.email,
