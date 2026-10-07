@@ -96,9 +96,11 @@ export const OfferingsView: React.FC = () => {
     setSelectedOffering(offering);
     setIsRosterOpen(true);
     setIsRosterLoading(true);
+    setRosterData([]);
     try {
-      const students = await offeringService.getRoster(offering.id);
-      setRosterData(students);
+      const result = await offeringService.getRoster(offering.id);
+      const list = Array.isArray(result) ? result : (result?.roster || []);
+      setRosterData(list);
     } catch (err: any) {
       showToast(err.message || "Failed to load class roster", "error");
       setRosterData([]);
@@ -266,46 +268,114 @@ export const OfferingsView: React.FC = () => {
       <Modal
         isOpen={isRosterOpen}
         onClose={() => setIsRosterOpen(false)}
-        title={`Class Roster: ${selectedOffering?.course.code} (${selectedOffering?.sectionCode})`}
+        title={`Class Roster: ${selectedOffering?.course.code || "Course"} (${selectedOffering?.sectionCode || "Section"})`}
         size="lg"
       >
         {isRosterLoading ? (
-          <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>
-            Loading enrolled students roster from REST API...
+          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+            <div style={{ marginBottom: "12px", color: "var(--palette-amber)" }}>
+              <Users size={28} style={{ animation: "pulse 1.5s infinite" }} />
+            </div>
+            <div>Loading enrolled students roster from REST API...</div>
           </div>
-        ) : rosterData.length === 0 ? (
-          <EmptyState title="No Enrolled Students" description="No students have registered for this section yet." />
         ) : (
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student Number</th>
-                  <th>Full Name</th>
-                  <th>Email</th>
-                  <th>Program</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rosterData.map((item: any) => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 600, color: "var(--palette-amber)" }}>
-                      {item.student?.studentNumber || item.studentNumber}
-                    </td>
-                    <td style={{ color: "#fff" }}>
-                      {item.student?.user?.lastName || item.lastName}, {item.student?.user?.firstName || item.firstName}
-                    </td>
-                    <td>{item.student?.user?.email || item.email}</td>
-                    <td>{item.student?.program?.code || item.programCode}</td>
-                    <td>
-                      <Badge variant="active">{item.status || "ENROLLED"}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {selectedOffering && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  backgroundColor: "rgba(68, 23, 78, 0.35)",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  marginBottom: "20px",
+                  fontSize: "0.85rem",
+                }}
+              >
+                <div>
+                  <span style={{ color: "var(--text-dim)" }}>Course: </span>
+                  <strong style={{ color: "#fff" }}>
+                    {selectedOffering.course?.title || selectedOffering.course?.code}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-dim)" }}>Schedule: </span>
+                  <span style={{ color: "var(--palette-amber)" }}>
+                    {selectedOffering.schedule || selectedOffering.schedulePattern || "TBA"}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-dim)" }}>Room: </span>
+                  <span style={{ color: "var(--palette-coral)" }}>
+                    {selectedOffering.room || "TBA"}
+                  </span>
+                </div>
+                <div>
+                  <Badge variant="active">
+                    Enrolled: {Array.isArray(rosterData) ? rosterData.length : 0} / {selectedOffering.maxCapacity}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {!Array.isArray(rosterData) || rosterData.length === 0 ? (
+              <EmptyState
+                title="No Enrolled Students"
+                description="No students have registered for this section yet."
+              />
+            ) : (
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Student Number</th>
+                      <th>Full Name</th>
+                      <th>Email</th>
+                      <th>Program</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rosterData.map((item: any) => {
+                      const student = item.student || item;
+                      const user = student.user || {};
+                      const studentNum = student.studentNumber || item.studentNumber || "N/A";
+                      const fullName = user.lastName
+                        ? `${user.lastName}, ${user.firstName}`
+                        : item.lastName
+                        ? `${item.lastName}, ${item.firstName}`
+                        : "Unknown";
+                      const email = user.email || item.email || "N/A";
+                      const programCode = student.program?.code || item.programCode || "—";
+                      const status = item.status || student.status || "ENROLLED";
+
+                      return (
+                        <tr key={item.id || studentNum}>
+                          <td style={{ fontWeight: 600, color: "var(--palette-amber)" }}>
+                            {studentNum}
+                          </td>
+                          <td style={{ color: "#fff", fontWeight: 500 }}>
+                            {fullName}
+                          </td>
+                          <td style={{ color: "var(--text-secondary)" }}>{email}</td>
+                          <td>
+                            <Badge variant="neutral">{programCode}</Badge>
+                          </td>
+                          <td>
+                            <Badge variant="active">{status}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </Modal>
 

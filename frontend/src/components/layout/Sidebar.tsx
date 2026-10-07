@@ -20,6 +20,7 @@ export interface NavItemConfig {
   label: string;
   icon: React.ReactNode;
   roles?: Role[];
+  section: string;
 }
 
 export interface SidebarProps {
@@ -35,56 +36,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange }) => 
       id: "dashboard",
       label: "Dashboard",
       icon: <LayoutDashboard size={18} />,
+      section: "Overview",
     },
     {
       id: "students",
       label: "Students",
       icon: <Users size={18} />,
       roles: ["ADMINISTRATOR", "REGISTRAR"],
+      section: "Academics",
     },
     {
       id: "academic-record",
       label: isStudent ? "My Academic Record" : "Academic Records",
       icon: <FileText size={18} />,
       roles: ["ADMINISTRATOR", "REGISTRAR", "STUDENT"],
+      section: "Academics",
     },
     {
       id: "programs",
       label: "Programs",
       icon: <Layers size={18} />,
+      section: "Academics",
     },
     {
       id: "courses",
       label: "Courses",
       icon: <BookOpen size={18} />,
+      section: "Academics",
     },
     {
       id: "terms",
       label: "Academic Terms",
       icon: <Calendar size={18} />,
       roles: ["ADMINISTRATOR", "REGISTRAR"],
+      section: "Academics",
     },
     {
       id: "offerings",
       label: isInstructor ? "My Course Offerings" : "Course Offerings",
       icon: <Calendar size={18} />,
+      section: "Classes & Grades",
     },
     {
       id: "enrollments",
       label: isStudent ? "My Enrollments" : "Enrollments",
       icon: <ClipboardList size={18} />,
       roles: ["ADMINISTRATOR", "REGISTRAR", "STUDENT"],
+      section: "Classes & Grades",
     },
     {
       id: "grades",
       label: isStudent ? "My Grades" : isInstructor ? "Grade Submission" : "Grades",
       icon: <Award size={18} />,
       roles: ["ADMINISTRATOR", "REGISTRAR", "INSTRUCTOR", "STUDENT"],
+      section: "Classes & Grades",
     },
     {
       id: "profile",
       label: "My Profile",
       icon: <UserCheck size={18} />,
+      section: "Account",
     },
   ];
 
@@ -106,18 +117,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange }) => 
       </div>
 
       <nav className="sidebar-nav">
-        <span className="nav-section-title">Navigation</span>
-        {visibleItems.map((item) => {
+        {visibleItems.map((item, index) => {
           const isActive = currentTab === item.id;
+          const showSection = index === 0 || item.section !== visibleItems[index - 1].section;
           return (
-            <button
-              key={item.id}
-              className={`nav-item ${isActive ? "active" : ""}`}
-              onClick={() => onTabChange(item.id)}
-            >
-              <span className="nav-item-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
+            <React.Fragment key={item.id}>
+              {showSection && (
+                <span className="nav-section-title">{item.section}</span>
+              )}
+              <button
+                type="button"
+                className={`nav-item ${isActive ? "active" : ""}`}
+                onClick={() => onTabChange(item.id)}
+              >
+                <span className="nav-item-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            </React.Fragment>
           );
         })}
       </nav>

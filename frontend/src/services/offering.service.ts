@@ -41,8 +41,20 @@ export const offeringService = {
     await apiClient.delete(`/course-offerings/${id}`);
   },
 
-  async getRoster(id: string): Promise<any[]> {
-    const res = await apiClient.get<ApiResponse<any[]>>(`/course-offerings/${id}/students`);
-    return res.data;
+  async getRoster(id: string): Promise<{ offering: any; roster: any[] }> {
+    const res = await apiClient.get<ApiResponse<any>>(`/course-offerings/${id}/students`);
+    if (res.data && Array.isArray(res.data.roster)) {
+      return {
+        offering: res.data.offering || null,
+        roster: res.data.roster,
+      };
+    }
+    if (Array.isArray(res.data)) {
+      return {
+        offering: null,
+        roster: res.data,
+      };
+    }
+    return { offering: null, roster: [] };
   },
 };

@@ -86,6 +86,7 @@ export interface CourseOffering {
   sectionCode: string;
   room?: string | null;
   schedulePattern?: string | null;
+  schedule?: string | null;
   maxCapacity: number;
   status: OfferingStatus;
   course: {
