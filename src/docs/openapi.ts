@@ -243,9 +243,12 @@ export const openApiSpec = {
       post: {
         tags: ["Authentication"],
         summary: "Invalidate current user session",
+        description:
+          "Requires Bearer token authentication. In Swagger UI, copy the `token` from `/auth/login`, click the green 'Authorize 🔓' button at the top of the page, paste the token, and click Authorize.",
+        security: [{ BearerAuth: [] }],
         responses: {
           200: { description: "Logged out successfully" },
-          401: { description: "Unauthenticated" },
+          401: { description: "Unauthenticated (missing or invalid Bearer token)" },
         },
       },
     },
@@ -253,9 +256,12 @@ export const openApiSpec = {
       get: {
         tags: ["Authentication"],
         summary: "Get current authenticated user profile",
+        description:
+          "Requires Bearer token authentication. In Swagger UI, paste the token via the green 'Authorize 🔓' button.",
+        security: [{ BearerAuth: [] }],
         responses: {
           200: { description: "User profile data" },
-          401: { description: "Unauthenticated" },
+          401: { description: "Unauthenticated (missing or invalid Bearer token)" },
         },
       },
     },
