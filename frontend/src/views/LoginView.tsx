@@ -35,9 +35,9 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (roleEmail: string) => {
+  const handleQuickFill = (roleEmail: string, rolePassword: string) => {
     setEmail(roleEmail);
-    setPassword("Password123!");
+    setPassword(rolePassword);
     setErrorMessage(null);
   };
 
@@ -203,33 +203,37 @@ export const LoginView: React.FC = () => {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleQuickFill("admin@sims.edu")}
+              onClick={() => handleQuickFill("admin@sims.edu", "Admin123!")}
+              title="admin@sims.edu / Admin123!"
             >
-              Administrator
+              Admin (Admin123!)
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleQuickFill("registrar@sims.edu")}
+              onClick={() => handleQuickFill("registrar@sims.edu", "Registrar123!")}
+              title="registrar@sims.edu / Registrar123!"
             >
-              Registrar
+              Registrar (Registrar123!)
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleQuickFill("faculty@sims.edu")}
+              onClick={() => handleQuickFill("faculty@sims.edu", "Password123!")}
+              title="faculty@sims.edu / Password123!"
             >
-              Instructor
+              Instructor (Password123!)
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleQuickFill("student@sims.edu")}
+              onClick={() => handleQuickFill("student@sims.edu", "Password123!")}
+              title="student@sims.edu / Password123!"
             >
-              Student
+              Student (Password123!)
             </Button>
           </div>
         </div>

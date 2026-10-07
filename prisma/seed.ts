@@ -60,7 +60,7 @@ async function main() {
   // Administrator
   await prisma.user.upsert({
     where: { email: "admin@sims.edu" },
-    update: {},
+    update: { passwordHash: adminPasswordHash },
     create: {
       email: "admin@sims.edu",
       passwordHash: adminPasswordHash,
@@ -74,7 +74,7 @@ async function main() {
   // Registrar / Staff
   await prisma.user.upsert({
     where: { email: "registrar@sims.edu" },
-    update: {},
+    update: { passwordHash: registrarPasswordHash },
     create: {
       email: "registrar@sims.edu",
       passwordHash: registrarPasswordHash,
@@ -85,10 +85,32 @@ async function main() {
     },
   });
 
+  // Demo Faculty / Instructor
+  const demoFaculty = await prisma.user.upsert({
+    where: { email: "faculty@sims.edu" },
+    update: { passwordHash: standardPasswordHash },
+    create: {
+      email: "faculty@sims.edu",
+      passwordHash: standardPasswordHash,
+      role: Role.INSTRUCTOR,
+      firstName: "Demo",
+      lastName: "Faculty",
+      isActive: true,
+      instructorProfile: {
+        create: {
+          employeeNumber: "EMP-2026-0000",
+          department: "Department of Computer Science",
+          title: "Associate Professor",
+        },
+      },
+    },
+    include: { instructorProfile: true },
+  });
+
   // Instructors
   const instructor1User = await prisma.user.upsert({
     where: { email: "prof.smith@sims.edu" },
-    update: {},
+    update: { passwordHash: standardPasswordHash },
     create: {
       email: "prof.smith@sims.edu",
       passwordHash: standardPasswordHash,
@@ -171,6 +193,7 @@ async function main() {
   });
 
   const instructors = [
+    demoFaculty.instructorProfile!,
     instructor1User.instructorProfile!,
     instructor2User.instructorProfile!,
     instructor3User.instructorProfile!,
@@ -370,7 +393,7 @@ async function main() {
     const fn = firstNames[(i - 1) % firstNames.length];
     const ln = lastNames[(i - 1) % lastNames.length];
     const studentNum = `2026-${String(i).padStart(5, "0")}`;
-    const email = i === 1 ? "student.alice@sims.edu"
+    const email = i === 1 ? "student@sims.edu"
       : i === 2 ? "student.bob@sims.edu"
       : i === 3 ? "student.charlie@sims.edu"
       : `student.${fn.toLowerCase()}.${ln.toLowerCase().replace(/\s+/g, "")}${i}@sims.edu`;
@@ -381,7 +404,7 @@ async function main() {
 
     const user = await prisma.user.upsert({
       where: { email },
-      update: {},
+      update: { passwordHash: standardPasswordHash },
       create: {
         email,
         passwordHash: standardPasswordHash,
