@@ -18,7 +18,7 @@ import { ApiError } from "../services/api-client";
 
 export const OfferingsView: React.FC = () => {
   const { showToast } = useToast();
-  const { canManageAcademics, isStudent } = useAuth();
+  const { canManageAcademics, isStudent, isInstructor, user } = useAuth();
 
   const [offerings, setOfferings] = useState<CourseOffering[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -84,11 +84,15 @@ export const OfferingsView: React.FC = () => {
       const res = await offeringService.listOfferings({
         term_id: selectedTerm || undefined,
         course_id: selectedCourseId || undefined,
+        instructor_id: isInstructor ? (user?.instructorId || undefined) : undefined,
         page: currentPage,
         per_page: 10,
       });
-      // In-memory search filter for section/course/room if search query present
+      // Safety filter for instructor role to only retain offerings assigned to this instructor
       let list = res.data;
+      if (isInstructor && user?.instructorId) {
+        list = list.filter((o) => o.instructorId === user.instructorId || o.instructor?.id === user.instructorId);
+      }
       if (search.trim()) {
         const q = search.toLowerCase();
         list = list.filter((o) =>
@@ -105,7 +109,7 @@ export const OfferingsView: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTerm, selectedCourseId, search, currentPage]);
+  }, [selectedTerm, selectedCourseId, isInstructor, user, search, currentPage]);
 
   useEffect(() => {
     fetchOfferings();
@@ -187,9 +191,13 @@ export const OfferingsView: React.FC = () => {
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#fff" }}>Course Offerings</h2>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#fff" }}>
+              {isInstructor ? "My Course Offerings" : "Course Offerings"}
+            </h2>
             <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-              Active term class sections, assigned instructors, and room schedules
+              {isInstructor
+                ? "Course sections assigned to you for instruction and student grade encoding"
+                : "Active term class sections, assigned instructors, and room schedules"}
             </p>
           </div>
 
@@ -245,7 +253,14 @@ export const OfferingsView: React.FC = () => {
             Loading course offerings...
           </div>
         ) : offerings.length === 0 ? (
-          <EmptyState title="No Course Offerings" description="No course sections found for the chosen filters." />
+          <EmptyState
+            title={isInstructor ? "No Assigned Course Offerings" : "No Course Offerings"}
+            description={
+              isInstructor
+                ? "You currently do not have any course sections assigned to you for this term."
+                : "No course sections found for the chosen filters."
+            }
+          />
         ) : (
           <>
             <div className="table-responsive">
@@ -255,7 +270,7 @@ export const OfferingsView: React.FC = () => {
                     <th>Course Code</th>
                     <th>Course Title</th>
                     <th>Section</th>
-                    <th>Instructor</th>
+                    {!isInstructor && <th>Instructor</th>}
                     <th>Schedule</th>
                     <th>Room</th>
                     <th>Enrollment</th>
@@ -283,11 +298,13 @@ export const OfferingsView: React.FC = () => {
                             {o.sectionCode}
                           </span>
                         </td>
-                        <td>
-                          {o.instructor?.user
-                            ? `${o.instructor.user.firstName} ${o.instructor.user.lastName}`
-                            : "TBA"}
-                        </td>
+                        {!isInstructor && (
+                          <td>
+                            {o.instructor?.user
+                              ? `${o.instructor.user.firstName} ${o.instructor.user.lastName}`
+                              : "TBA"}
+                          </td>
+                        )}
                         <td style={{ fontSize: "0.82rem" }}>{o.schedulePattern || "TBA"}</td>
                         <td>{o.room || "TBA"}</td>
                         <td>
