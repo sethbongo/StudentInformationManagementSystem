@@ -7,11 +7,25 @@ import { ApiResponse } from "@/common/responses/api-response";
 import { submitGradeSchema, gradeQuerySchema } from "@/modules/grades/grade.schema";
 import { GradeService } from "@/modules/grades/grade.service";
 
+import prisma from "@/common/db/prisma";
+
 export const GET = apiHandler(async (req: NextRequest) => {
   const currentUser = getAuthUser(req);
-  requireRole(currentUser, ["ADMINISTRATOR", "REGISTRAR", "INSTRUCTOR"]);
+  requireRole(currentUser, ["ADMINISTRATOR", "REGISTRAR", "INSTRUCTOR", "STUDENT"]);
 
   const query = validateQuery(gradeQuerySchema, req);
+  if (currentUser.role === "STUDENT") {
+    let studentId = currentUser.studentId;
+    if (!studentId) {
+      const student = await prisma.student.findUnique({ where: { userId: currentUser.sub } });
+      studentId = student?.id;
+    }
+    if (!studentId) {
+      return ApiResponse.paginated([], 1, query.limit || 10, 0);
+    }
+    query.studentId = studentId;
+    query.student_id = studentId;
+  }
   const { grades, total, page, limit } = await GradeService.listGrades(query);
   return ApiResponse.paginated(grades, page, limit, total);
 });

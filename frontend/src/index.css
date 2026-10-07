@@ -502,17 +502,51 @@ button, input, select, textarea, optgroup {
   color: var(--palette-coral);
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input, .form-select, select, .form-textarea {
   height: var(--control-height-md);
   padding: 0 14px;
   font-family: var(--font-family);
   font-size: 0.875rem;
-  background-color: rgba(22, 20, 38, 0.8);
+  background-color: rgba(22, 20, 38, 0.85);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: #fff;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
+}
+
+.form-select, select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: rgba(22, 20, 38, 0.85);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ED9E59' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.form-select:hover, select:hover {
+  border-color: rgba(163, 64, 84, 0.65);
+  background-color: rgba(30, 26, 52, 0.95);
+  box-shadow: 0 0 14px rgba(163, 64, 84, 0.2);
+}
+
+.form-select option, select option {
+  background-color: #1F1932;
+  color: #FFFFFF;
+  padding: 12px 14px;
+  font-family: var(--font-family);
+  font-size: 0.875rem;
+}
+
+.form-select option:hover, select option:hover,
+.form-select option:focus, select option:focus,
+.form-select option:checked, select option:checked {
+  background: #44174E;
+  color: #ED9E59;
 }
 
 .form-textarea {
@@ -522,20 +556,20 @@ button, input, select, textarea, optgroup {
   resize: vertical;
 }
 
-.form-input:focus, .form-select:focus, .form-textarea:focus {
+.form-input:focus, .form-select:focus, select:focus, .form-textarea:focus {
   outline: none;
   border-color: var(--palette-amber);
-  box-shadow: 0 0 0 3px rgba(237, 158, 89, 0.2);
-  background-color: rgba(30, 26, 52, 0.95);
+  box-shadow: 0 0 0 3px rgba(237, 158, 89, 0.22);
+  background-color: rgba(30, 26, 52, 0.98);
 }
 
 .form-input::placeholder, .form-textarea::placeholder {
   color: var(--text-dim);
 }
 
-.form-input.is-invalid, .form-select.is-invalid {
+.form-input.is-invalid, .form-select.is-invalid, select.is-invalid {
   border-color: var(--palette-coral);
-  box-shadow: 0 0 0 3px rgba(233, 140, 137, 0.2);
+  box-shadow: 0 0 0 3px rgba(233, 140, 137, 0.22);
 }
 
 .form-error {

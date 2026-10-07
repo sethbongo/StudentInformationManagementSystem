@@ -6,6 +6,8 @@ export const enrollmentService = {
   async listEnrollments(params?: {
     student_id?: string;
     course_offering_id?: string;
+    course_id?: string;
+    search?: string;
     status?: string;
     page?: number;
     per_page?: number;

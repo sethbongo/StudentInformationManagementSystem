@@ -447,26 +447,29 @@ export const CoursesView: React.FC = () => {
               Students must complete and pass the following prerequisite courses before registering:
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {selectedCourse.prerequisites.map((req) => (
-                <div
-                  key={req.prerequisiteId}
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: "var(--radius-md)",
-                    backgroundColor: "rgba(68, 23, 78, 0.4)",
-                    border: "1px solid var(--border-subtle)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <strong style={{ color: "var(--palette-amber)" }}>{req.prerequisiteCourse.code}</strong>
-                    <div style={{ color: "#fff", fontSize: "0.88rem" }}>{req.prerequisiteCourse.title}</div>
+              {selectedCourse.prerequisites.map((req: any) => {
+                const pCourse = req.prerequisite || req.prerequisiteCourse || {};
+                return (
+                  <div
+                    key={req.prerequisiteId || pCourse.id || req.id}
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "var(--radius-md)",
+                      backgroundColor: "rgba(68, 23, 78, 0.4)",
+                      border: "1px solid var(--border-subtle)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "var(--palette-amber)" }}>{pCourse.code || "Course"}</strong>
+                      <div style={{ color: "#fff", fontSize: "0.88rem" }}>{pCourse.title || "Prerequisite Course"}</div>
+                    </div>
+                    <Badge variant="role">{pCourse.units || 3} Units</Badge>
                   </div>
-                  <Badge variant="role">{req.prerequisiteCourse.units} Units</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (

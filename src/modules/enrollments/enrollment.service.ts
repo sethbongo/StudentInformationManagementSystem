@@ -12,6 +12,7 @@ export class EnrollmentService {
 
     const studentId = query.studentId || query.student_id;
     const courseOfferingId = query.courseOfferingId || query.course_offering_id;
+    const courseId = query.courseId || query.course_id;
     const termId = query.termId || query.term_id;
 
     let targetStudentId = studentId;
@@ -26,8 +27,10 @@ export class EnrollmentService {
       take: limit,
       studentId: targetStudentId,
       courseOfferingId,
+      courseId,
       termId,
       status: query.status,
+      search: query.search,
       sort: query.sort,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,

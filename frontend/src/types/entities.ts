@@ -102,6 +102,7 @@ export interface CourseOffering {
     isCurrent: boolean;
   };
   instructor?: Instructor | null;
+  enrolledCount?: number;
   _count?: {
     enrollments?: number;
   };

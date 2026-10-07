@@ -12,6 +12,7 @@ export class GradeService {
     const skip = (page - 1) * limit;
 
     const offeringId = query.offeringId || query.offering_id;
+    const courseId = query.courseId || query.course_id;
     const studentId = query.studentId || query.student_id;
     const isFinalizedParam = query.isFinalized || query.is_finalized;
 
@@ -22,9 +23,11 @@ export class GradeService {
       skip,
       take: limit,
       offeringId,
+      courseId,
       studentId,
       remarks: query.remarks as GradeRemark,
       isFinalized: isFinalizedBool,
+      search: query.search,
       sort: query.sort,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,

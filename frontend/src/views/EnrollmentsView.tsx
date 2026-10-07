@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { ClipboardList, Plus, Trash2, CheckCircle2, AlertCircle, Search } from "lucide-react";
-import { Enrollment, CourseOffering, Student } from "../types/entities";
+import { ClipboardList, Plus, Trash2, CheckCircle2, AlertCircle, Search, Filter } from "lucide-react";
+import { Enrollment, CourseOffering, Student, Course } from "../types/entities";
 import { enrollmentService } from "../services/enrollment.service";
 import { offeringService } from "../services/offering.service";
 import { studentService } from "../services/student.service";
+import { courseService } from "../services/course.service";
 import { Button } from "../components/common/Button";
+import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Modal } from "../components/common/Modal";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
@@ -22,8 +24,11 @@ export const EnrollmentsView: React.FC = () => {
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [offerings, setOfferings] = useState<CourseOffering[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState({
     page: 1,
@@ -50,6 +55,7 @@ export const EnrollmentsView: React.FC = () => {
 
   useEffect(() => {
     offeringService.listOfferings({ per_page: 50 }).then((res) => setOfferings(res.data)).catch(() => {});
+    courseService.listCourses({ per_page: 100 }).then((res) => setCourses(res.data)).catch(() => {});
     if (canManageAcademics) {
       studentService.listStudents({ per_page: 100 }).then((res) => setStudents(res.data)).catch(() => {});
     }
@@ -61,6 +67,8 @@ export const EnrollmentsView: React.FC = () => {
     try {
       const res = await enrollmentService.listEnrollments({
         status: selectedStatus || undefined,
+        course_id: selectedCourse || undefined,
+        search: searchQuery.trim() || undefined,
         page: currentPage,
         per_page: 10,
       });
@@ -71,7 +79,7 @@ export const EnrollmentsView: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedStatus, currentPage]);
+  }, [selectedStatus, selectedCourse, searchQuery, currentPage]);
 
   useEffect(() => {
     fetchEnrollments();
@@ -142,21 +150,51 @@ export const EnrollmentsView: React.FC = () => {
           </Button>
         </div>
 
-        <div style={{ marginTop: "16px", maxWidth: "260px" }}>
-          <Select
-            label="Filter by Status"
-            options={[
-              { value: "", label: "All Registration Statuses" },
-              { value: "ENROLLED", label: "ENROLLED" },
-              { value: "DROPPED", label: "DROPPED" },
-              { value: "COMPLETED", label: "COMPLETED" },
-            ]}
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
+        <div style={{ marginTop: "20px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: "240px" }}>
+            <Input
+              label="Search Enrollments"
+              placeholder="Search student #, name, course code, section..."
+              icon={<Search size={16} />}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          <div style={{ minWidth: "220px", flex: 1 }}>
+            <Select
+              label="Filter by Course"
+              options={[
+                { value: "", label: "All Courses" },
+                ...courses.map((c) => ({ value: c.id, label: `${c.code} - ${c.title}` })),
+              ]}
+              value={selectedCourse}
+              onChange={(e) => {
+                setSelectedCourse(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          <div style={{ minWidth: "200px" }}>
+            <Select
+              label="Filter by Status"
+              options={[
+                { value: "", label: "All Registration Statuses" },
+                { value: "ENROLLED", label: "ENROLLED" },
+                { value: "DROPPED", label: "DROPPED" },
+                { value: "COMPLETED", label: "COMPLETED" },
+              ]}
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Award, Plus, Edit, CheckCircle, Search, Filter } from "lucide-react";
-import { Grade, Enrollment } from "../types/entities";
+import { Grade, Enrollment, Course } from "../types/entities";
 import { gradeService } from "../services/grade.service";
 import { enrollmentService } from "../services/enrollment.service";
+import { courseService } from "../services/course.service";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
@@ -21,6 +22,9 @@ export const GradesView: React.FC = () => {
 
   const [grades, setGrades] = useState<Grade[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState({
     page: 1,
@@ -59,6 +63,8 @@ export const GradesView: React.FC = () => {
     try {
       const res = await gradeService.listGrades({
         student_id: isStudent ? (user?.studentId || undefined) : undefined,
+        course_id: selectedCourse || undefined,
+        search: searchQuery.trim() || undefined,
         page: currentPage,
         per_page: 10,
       });
@@ -69,7 +75,11 @@ export const GradesView: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isStudent, user, currentPage]);
+  }, [isStudent, user, selectedCourse, searchQuery, currentPage]);
+
+  useEffect(() => {
+    courseService.listCourses({ per_page: 100 }).then((res) => setCourses(res.data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchGrades();
@@ -180,6 +190,36 @@ export const GradesView: React.FC = () => {
             </Button>
           )}
         </div>
+
+        <div style={{ marginTop: "20px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: "240px" }}>
+            <Input
+              label="Search Grades"
+              placeholder={isStudent ? "Search by course code, title, remarks..." : "Search student #, name, course code, remarks..."}
+              icon={<Search size={16} />}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          <div style={{ minWidth: "240px", flex: 1 }}>
+            <Select
+              label="Filter by Course"
+              options={[
+                { value: "", label: "All Courses" },
+                ...courses.map((c) => ({ value: c.id, label: `${c.code} - ${c.title}` })),
+              ]}
+              value={selectedCourse}
+              onChange={(e) => {
+                setSelectedCourse(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -200,9 +240,12 @@ export const GradesView: React.FC = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Student #</th>
-                    <th>Student Name</th>
+                    {!isStudent && <th>Student #</th>}
+                    {!isStudent && <th>Student Name</th>}
                     <th>Course Code</th>
+                    {isStudent && <th>Course Title</th>}
+                    {isStudent && <th>Section</th>}
+                    {isStudent && <th>Units</th>}
                     <th>Midterm</th>
                     <th>Final</th>
                     <th>Rating</th>
@@ -214,18 +257,49 @@ export const GradesView: React.FC = () => {
                 <tbody>
                   {grades.map((g) => (
                     <tr key={g.id}>
-                      <td style={{ fontWeight: 600, color: "var(--palette-amber)" }}>
-                        {g.enrollment.student.studentNumber}
-                      </td>
-                      <td style={{ color: "#fff", fontWeight: 500 }}>
-                        {g.enrollment.student.user.lastName}, {g.enrollment.student.user.firstName}
-                      </td>
+                      {!isStudent && (
+                        <td style={{ fontWeight: 600, color: "var(--palette-amber)" }}>
+                          {g.enrollment.student.studentNumber}
+                        </td>
+                      )}
+                      {!isStudent && (
+                        <td style={{ color: "#fff", fontWeight: 500 }}>
+                          {g.enrollment.student.user.lastName}, {g.enrollment.student.user.firstName}
+                        </td>
+                      )}
                       <td>
                         <strong style={{ color: "var(--palette-amber)" }}>{g.enrollment.courseOffering.course.code}</strong>
-                        <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-                          Sec {g.enrollment.courseOffering.sectionCode}
-                        </div>
+                        {!isStudent && (
+                          <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                            Sec {g.enrollment.courseOffering.sectionCode}
+                          </div>
+                        )}
                       </td>
+                      {isStudent && (
+                        <td style={{ color: "#fff", fontWeight: 500 }}>
+                          {g.enrollment.courseOffering.course.title}
+                        </td>
+                      )}
+                      {isStudent && (
+                        <td>
+                          <span
+                            style={{
+                              padding: "2px 8px",
+                              backgroundColor: "rgba(68, 23, 78, 0.5)",
+                              borderRadius: "4px",
+                              fontWeight: 600,
+                              color: "var(--palette-coral)",
+                            }}
+                          >
+                            {g.enrollment.courseOffering.sectionCode}
+                          </span>
+                        </td>
+                      )}
+                      {isStudent && (
+                        <td style={{ fontWeight: 600, color: "#fff" }}>
+                          {g.enrollment.courseOffering.course.units}
+                        </td>
+                      )}
                       <td>{g.midtermGrade !== null ? Number(g.midtermGrade).toFixed(2) : "—"}</td>
                       <td>{g.finalGrade !== null ? Number(g.finalGrade).toFixed(2) : "—"}</td>
                       <td style={{ fontWeight: 800, fontSize: "0.95rem", color: "#fff" }}>

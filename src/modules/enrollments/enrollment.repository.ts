@@ -7,8 +7,10 @@ export class EnrollmentRepository {
     take: number;
     studentId?: string;
     courseOfferingId?: string;
+    courseId?: string;
     termId?: string;
     status?: EnrollmentStatus;
+    search?: string;
     sort?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
@@ -19,6 +21,25 @@ export class EnrollmentRepository {
       ...(params.status && { status: params.status }),
       ...(params.termId && { courseOffering: { termId: params.termId } }),
     };
+
+    if (params.courseId) {
+      where.courseOffering = {
+        ...(where.courseOffering as any),
+        courseId: params.courseId,
+      };
+    }
+
+    if (params.search && params.search.trim() !== "") {
+      const q = params.search.trim();
+      where.OR = [
+        { student: { studentNumber: { contains: q, mode: "insensitive" } } },
+        { student: { user: { firstName: { contains: q, mode: "insensitive" } } } },
+        { student: { user: { lastName: { contains: q, mode: "insensitive" } } } },
+        { courseOffering: { course: { code: { contains: q, mode: "insensitive" } } } },
+        { courseOffering: { course: { title: { contains: q, mode: "insensitive" } } } },
+        { courseOffering: { sectionCode: { contains: q, mode: "insensitive" } } },
+      ];
+    }
 
     let orderBy: Prisma.EnrollmentOrderByWithRelationInput = { enrolledAt: "desc" };
     const sortField = params.sortBy || params.sort;

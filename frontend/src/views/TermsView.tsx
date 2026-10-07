@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Calendar, Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
-import { AcademicTerm } from "../types/entities";
+import { Calendar, Plus, Edit, Trash2, CheckCircle2, Search, BookOpen, Users, Layers, Info } from "lucide-react";
+import { AcademicTerm, CourseOffering } from "../types/entities";
 import { termService } from "../services/term.service";
+import { offeringService } from "../services/offering.service";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
@@ -19,6 +20,7 @@ export const TermsView: React.FC = () => {
   const { canManageAcademics, isAdmin } = useAuth();
 
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +29,11 @@ export const TermsView: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedTerm, setSelectedTerm] = useState<AcademicTerm | null>(null);
+
+  // Term Details Modal (Connected Data)
+  const [detailTerm, setDetailTerm] = useState<AcademicTerm | null>(null);
+  const [termOfferings, setTermOfferings] = useState<CourseOffering[]>([]);
+  const [isLoadingOfferings, setIsLoadingOfferings] = useState(false);
 
   const [formData, setFormData] = useState({
     code: "",
@@ -52,6 +59,19 @@ export const TermsView: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRowClick = async (term: AcademicTerm) => {
+    setDetailTerm(term);
+    setIsLoadingOfferings(true);
+    try {
+      const res = await offeringService.listOfferings({ term_id: term.id, per_page: 100 });
+      setTermOfferings(res.data);
+    } catch {
+      setTermOfferings([]);
+    } finally {
+      setIsLoadingOfferings(false);
+    }
+  };
 
   useEffect(() => {
     fetchTerms();
@@ -147,6 +167,17 @@ export const TermsView: React.FC = () => {
     }
   };
 
+  const filteredTerms = terms.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      t.code.toLowerCase().includes(q) ||
+      t.name.toLowerCase().includes(q) ||
+      t.academicYear.toLowerCase().includes(q) ||
+      t.semester.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div className="card">
@@ -164,17 +195,33 @@ export const TermsView: React.FC = () => {
             </Button>
           )}
         </div>
+
+        <div style={{ marginTop: "18px", maxWidth: "420px" }}>
+          <Input
+            placeholder="Search terms by code, name, year, semester..."
+            icon={<Search size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="card">
+        <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--palette-amber)" }}>
+          <Info size={14} /> Tip: Click on any academic term row to inspect its connected course offerings and statistics.
+        </div>
+
         {error ? (
           <ErrorState message={error} onRetry={fetchTerms} />
         ) : isLoading ? (
           <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
             Loading academic terms...
           </div>
-        ) : terms.length === 0 ? (
-          <EmptyState title="No Academic Terms Found" />
+        ) : filteredTerms.length === 0 ? (
+          <EmptyState
+            title={searchQuery ? "No Matching Terms" : "No Academic Terms Found"}
+            description={searchQuery ? `No academic terms match '${searchQuery}'.` : undefined}
+          />
         ) : (
           <div className="table-responsive">
             <table className="data-table">
@@ -190,8 +237,13 @@ export const TermsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {terms.map((t) => (
-                  <tr key={t.id}>
+                {filteredTerms.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => handleRowClick(t)}
+                    style={{ cursor: "pointer" }}
+                    title="Click row to view connected details"
+                  >
                     <td style={{ fontWeight: 700, color: "var(--palette-amber)" }}>{t.code}</td>
                     <td style={{ color: "#fff", fontWeight: 500 }}>{t.name}</td>
                     <td>{t.academicYear}</td>
@@ -207,7 +259,7 @@ export const TermsView: React.FC = () => {
                       )}
                     </td>
                     {canManageAcademics && (
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                           <button
                             className="btn btn-sm btn-secondary"
@@ -348,6 +400,196 @@ export const TermsView: React.FC = () => {
         message={`Are you sure you want to delete '${selectedTerm?.code}' (${selectedTerm?.name})?`}
         isLoading={isSubmitting}
       />
+
+      {/* CONNECTED TERM DETAILS MODAL */}
+      <Modal
+        isOpen={!!detailTerm}
+        onClose={() => setDetailTerm(null)}
+        title={`Academic Term Details: ${detailTerm?.code || ""}`}
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setDetailTerm(null)}>
+            Close
+          </Button>
+        }
+      >
+        {detailTerm && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Term Summary Header Card */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, rgba(68, 23, 78, 0.45) 0%, rgba(102, 34, 73, 0.3) 100%)",
+                border: "1px solid var(--border-medium)",
+                borderRadius: "var(--radius-md)",
+                padding: "20px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", color: "var(--palette-amber)", fontWeight: 600 }}>
+                    Official Academic Term Calendar
+                  </div>
+                  <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#fff", marginTop: "2px" }}>
+                    {detailTerm.name}
+                  </h3>
+                  <div style={{ display: "flex", gap: "16px", marginTop: "6px", color: "var(--text-secondary)", fontSize: "0.85rem", flexWrap: "wrap" }}>
+                    <span>Academic Year: <strong style={{ color: "#fff" }}>{detailTerm.academicYear}</strong></span>
+                    <span>•</span>
+                    <span>Semester: <strong style={{ color: "#fff" }}>{detailTerm.semester}</strong></span>
+                    <span>•</span>
+                    <span>
+                      Duration: <strong style={{ color: "#fff" }}>{new Date(detailTerm.startDate).toLocaleDateString()} — {new Date(detailTerm.endDate).toLocaleDateString()}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  {detailTerm.isCurrent ? (
+                    <Badge variant="active" style={{ fontSize: "0.85rem", padding: "6px 14px" }}>
+                      Current Active Term
+                    </Badge>
+                  ) : (
+                    <Badge variant="neutral" style={{ fontSize: "0.85rem", padding: "6px 14px" }}>
+                      Archived Term
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Statistics Grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                  gap: "12px",
+                  marginTop: "16px",
+                  paddingTop: "14px",
+                  borderTop: "1px solid var(--border-subtle)",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Total Offerings
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff" }}>
+                    {termOfferings.length}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Enrolled Students
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--palette-amber)" }}>
+                    {termOfferings.reduce((sum, o) => sum + (o.enrolledCount || 0), 0)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Total Capacity
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff" }}>
+                    {termOfferings.reduce((sum, o) => sum + (o.maxCapacity || 0), 0)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Capacity Filled
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#4ade80" }}>
+                    {(() => {
+                      const enrolled = termOfferings.reduce((sum, o) => sum + (o.enrolledCount || 0), 0);
+                      const cap = termOfferings.reduce((sum, o) => sum + (o.maxCapacity || 0), 0);
+                      return cap > 0 ? `${Math.round((enrolled / cap) * 100)}%` : "0%";
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Connected Course Offerings Section */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <h4 style={{ fontSize: "1.05rem", fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Layers size={18} color="var(--palette-coral)" /> Connected Course Offerings
+                </h4>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  {termOfferings.length} section{termOfferings.length !== 1 ? "s" : ""} scheduled
+                </span>
+              </div>
+
+              {isLoadingOfferings ? (
+                <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>
+                  Loading connected course offerings...
+                </div>
+              ) : termOfferings.length === 0 ? (
+                <EmptyState
+                  title="No Course Offerings"
+                  description="No course offerings have been created or assigned to this academic term yet."
+                />
+              ) : (
+                <div className="table-responsive">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Course Code</th>
+                        <th>Course Title</th>
+                        <th>Section</th>
+                        <th>Instructor</th>
+                        <th>Schedule</th>
+                        <th>Capacity</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {termOfferings.map((o) => (
+                        <tr key={o.id}>
+                          <td style={{ fontWeight: 700, color: "var(--palette-amber)" }}>
+                            {o.course.code}
+                          </td>
+                          <td style={{ color: "#fff" }}>{o.course.title}</td>
+                          <td>
+                            <span
+                              style={{
+                                padding: "2px 8px",
+                                backgroundColor: "rgba(68, 23, 78, 0.5)",
+                                borderRadius: "4px",
+                                fontWeight: 600,
+                                color: "var(--palette-coral)",
+                              }}
+                            >
+                              {o.sectionCode}
+                            </span>
+                          </td>
+                          <td>
+                            {o.instructor
+                              ? `${o.instructor.user.lastName}, ${o.instructor.user.firstName}`
+                              : "Unassigned"}
+                          </td>
+                          <td style={{ fontSize: "0.8rem" }}>{o.schedulePattern || "TBA"}</td>
+                          <td>
+                            <span style={{ fontWeight: 600, color: "#fff" }}>
+                              {o.enrolledCount ?? o._count?.enrollments ?? 0}
+                            </span>{" "}
+                            / {o.maxCapacity}
+                          </td>
+                          <td>
+                            <Badge variant={o.status === "OPEN" ? "active" : o.status === "CLOSED" ? "failed" : "neutral"}>
+                              {o.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

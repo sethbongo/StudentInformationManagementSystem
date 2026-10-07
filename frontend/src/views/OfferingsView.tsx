@@ -18,12 +18,14 @@ import { ApiError } from "../services/api-client";
 
 export const OfferingsView: React.FC = () => {
   const { showToast } = useToast();
-  const { canManageAcademics } = useAuth();
+  const { canManageAcademics, isStudent } = useAuth();
 
   const [offerings, setOfferings] = useState<CourseOffering[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [selectedTerm, setSelectedTerm] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState({
     page: 1,
@@ -42,6 +44,11 @@ export const OfferingsView: React.FC = () => {
   const [rosterData, setRosterData] = useState<any[]>([]);
   const [selectedOffering, setSelectedOffering] = useState<CourseOffering | null>(null);
   const [isRosterLoading, setIsRosterLoading] = useState(false);
+
+  // Course Details Modal (for students)
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [selectedCourseInfo, setSelectedCourseInfo] = useState<Course | null>(null);
+  const [isCourseLoading, setIsCourseLoading] = useState(false);
 
   // Create Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -76,17 +83,29 @@ export const OfferingsView: React.FC = () => {
     try {
       const res = await offeringService.listOfferings({
         term_id: selectedTerm || undefined,
+        course_id: selectedCourseId || undefined,
         page: currentPage,
         per_page: 10,
       });
-      setOfferings(res.data);
+      // In-memory search filter for section/course/room if search query present
+      let list = res.data;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        list = list.filter((o) =>
+          o.sectionCode.toLowerCase().includes(q) ||
+          o.course.code.toLowerCase().includes(q) ||
+          o.course.title.toLowerCase().includes(q) ||
+          (o.room && o.room.toLowerCase().includes(q))
+        );
+      }
+      setOfferings(list);
       setPaginationMeta(res.meta);
     } catch (err: any) {
       setError(err.message || "Failed to load course offerings");
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTerm, currentPage]);
+  }, [selectedTerm, selectedCourseId, search, currentPage]);
 
   useEffect(() => {
     fetchOfferings();
@@ -106,6 +125,20 @@ export const OfferingsView: React.FC = () => {
       setRosterData([]);
     } finally {
       setIsRosterLoading(false);
+    }
+  };
+
+  const handleOpenCourseInfo = async (courseId: string) => {
+    setIsCourseModalOpen(true);
+    setIsCourseLoading(true);
+    try {
+      const c = await courseService.getCourseById(courseId);
+      setSelectedCourseInfo(c);
+    } catch {
+      const local = courses.find((item) => item.id === courseId);
+      setSelectedCourseInfo(local || null);
+    } finally {
+      setIsCourseLoading(false);
     }
   };
 
@@ -167,16 +200,40 @@ export const OfferingsView: React.FC = () => {
           )}
         </div>
 
-        <div style={{ marginTop: "16px", maxWidth: "340px" }}>
-          <Select
-            label="Filter by Academic Term"
-            options={[{ value: "", label: "All Academic Terms" }, ...terms.map((t) => ({ value: t.id, label: `${t.code} - ${t.name}` }))]}
-            value={selectedTerm}
-            onChange={(e) => {
-              setSelectedTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
+        <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: "220px" }}>
+            <label className="form-label" style={{ fontSize: "0.78rem" }}>Search Offerings</label>
+            <Input
+              placeholder="Search section, course title or code, room..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <div style={{ minWidth: "200px" }}>
+            <label className="form-label" style={{ fontSize: "0.78rem" }}>Academic Term</label>
+            <Select
+              options={[{ value: "", label: "All Academic Terms" }, ...terms.map((t) => ({ value: t.id, label: `${t.code} - ${t.name}` }))]}
+              value={selectedTerm}
+              onChange={(e) => {
+                setSelectedTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <div style={{ minWidth: "200px" }}>
+            <label className="form-label" style={{ fontSize: "0.78rem" }}>Course</label>
+            <Select
+              options={[{ value: "", label: "All Courses" }, ...courses.map((c) => ({ value: c.id, label: `${c.code} - ${c.title}` }))]}
+              value={selectedCourseId}
+              onChange={(e) => {
+                setSelectedCourseId(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -188,7 +245,7 @@ export const OfferingsView: React.FC = () => {
             Loading course offerings...
           </div>
         ) : offerings.length === 0 ? (
-          <EmptyState title="No Course Offerings" description="No course sections found for the chosen term." />
+          <EmptyState title="No Course Offerings" description="No course sections found for the chosen filters." />
         ) : (
           <>
             <div className="table-responsive">
@@ -203,7 +260,7 @@ export const OfferingsView: React.FC = () => {
                     <th>Room</th>
                     <th>Enrollment</th>
                     <th>Status</th>
-                    <th style={{ textAlign: "right" }}>Class Roster</th>
+                    <th style={{ textAlign: "right" }}>{isStudent ? "Course Details" : "Class Roster"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,14 +300,25 @@ export const OfferingsView: React.FC = () => {
                           <Badge variant={o.status === "OPEN" ? "active" : "neutral"}>{o.status}</Badge>
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleOpenRoster(o)}
-                            icon={<Users size={14} />}
-                          >
-                            View Roster
-                          </Button>
+                          {isStudent ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleOpenCourseInfo(o.courseId || o.course.id)}
+                              icon={<BookOpen size={14} />}
+                            >
+                              View Course
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleOpenRoster(o)}
+                              icon={<Users size={14} />}
+                            >
+                              View Roster
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -377,6 +445,99 @@ export const OfferingsView: React.FC = () => {
             )}
           </>
         )}
+      </Modal>
+
+      {/* COURSE DETAILS MODAL (FOR STUDENTS & GENERAL INFO) */}
+      <Modal
+        isOpen={isCourseModalOpen}
+        onClose={() => setIsCourseModalOpen(false)}
+        title={`Course Information: ${selectedCourseInfo?.code || "Course"}`}
+        size="lg"
+      >
+        {isCourseLoading ? (
+          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+            Loading course curriculum details...
+          </div>
+        ) : selectedCourseInfo ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "rgba(68, 23, 78, 0.4)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                {selectedCourseInfo.title}
+              </div>
+              <div style={{ color: "var(--palette-amber)", fontSize: "0.85rem", fontWeight: 600 }}>
+                Course Code: {selectedCourseInfo.code}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
+              <div style={{ padding: "12px", backgroundColor: "rgba(22, 20, 38, 0.6)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Academic Units</span>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--palette-amber)" }}>{selectedCourseInfo.units} Units</div>
+              </div>
+              <div style={{ padding: "12px", backgroundColor: "rgba(22, 20, 38, 0.6)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Lecture Hours</span>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff" }}>{selectedCourseInfo.lectureHours} hrs/wk</div>
+              </div>
+              <div style={{ padding: "12px", backgroundColor: "rgba(22, 20, 38, 0.6)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Lab Hours</span>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff" }}>{selectedCourseInfo.labHours} hrs/wk</div>
+              </div>
+              <div style={{ padding: "12px", backgroundColor: "rgba(22, 20, 38, 0.6)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Degree Program</span>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--palette-coral)" }}>
+                  {selectedCourseInfo.program?.code || "Core"}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+                Course Description
+              </label>
+              <div style={{ padding: "14px", backgroundColor: "rgba(27, 25, 49, 0.7)", borderRadius: "8px", color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.6 }}>
+                {selectedCourseInfo.description || "No official course syllabus description provided."}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+                Course Prerequisites
+              </label>
+              {selectedCourseInfo.prerequisites && selectedCourseInfo.prerequisites.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {selectedCourseInfo.prerequisites.map((pr: any) => {
+                    const prereq = pr.prerequisite || pr.prerequisiteCourse || {};
+                    return (
+                      <div
+                        key={pr.prerequisiteId || prereq.id}
+                        style={{
+                          padding: "10px 14px",
+                          backgroundColor: "rgba(68, 23, 78, 0.35)",
+                          borderRadius: "6px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <strong style={{ color: "var(--palette-amber)" }}>{prereq.code || "Course"} - {prereq.title || "Prerequisite"}</strong>
+                        <Badge variant="role">{prereq.units || 3} Units</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>None (No prerequisite requirements).</div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </Modal>
 
       {/* CREATE OFFERING MODAL */}

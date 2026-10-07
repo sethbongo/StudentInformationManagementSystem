@@ -17,6 +17,8 @@ export const AcademicRecordView: React.FC<AcademicRecordViewProps> = ({ initialS
   const [record, setRecord] = useState<AcademicRecord | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(initialStudentId || "");
   const [studentsList, setStudentsList] = useState<Student[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [recordSearch, setRecordSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,29 +60,80 @@ export const AcademicRecordView: React.FC<AcademicRecordViewProps> = ({ initialS
     }
   }, [selectedStudentId, loadRecord]);
 
+  const filteredStudents = studentsList.filter((s) => {
+    if (!studentSearch.trim()) return true;
+    const q = studentSearch.toLowerCase();
+    return (
+      s.studentNumber.toLowerCase().includes(q) ||
+      s.user.lastName.toLowerCase().includes(q) ||
+      s.user.firstName.toLowerCase().includes(q) ||
+      s.program.code.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredTerms = record
+    ? record.academicTerms
+        .map((termGroup) => {
+          const q = recordSearch.trim().toLowerCase();
+          if (!q) return termGroup;
+
+          const termMatches =
+            termGroup.term.code.toLowerCase().includes(q) ||
+            termGroup.term.name.toLowerCase().includes(q);
+
+          if (termMatches) return termGroup;
+
+          const matchedCourses = termGroup.courses.filter(
+            (c) =>
+              c.courseCode.toLowerCase().includes(q) ||
+              c.courseTitle.toLowerCase().includes(q) ||
+              (c.instructorName && c.instructorName.toLowerCase().includes(q)) ||
+              c.sectionCode.toLowerCase().includes(q)
+          );
+
+          return {
+            ...termGroup,
+            courses: matchedCourses,
+          };
+        })
+        .filter((termGroup) => termGroup.courses.length > 0)
+    : [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Selector Header for Admin/Registrar */}
       {canManageAcademics && (
         <div className="card">
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: "260px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
               <label className="form-label">
-                <Search size={14} /> Select Student Record
+                <Search size={14} /> Search Student
               </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Type name, student #, or program..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+              />
+            </div>
+
+            <div style={{ flex: 2, minWidth: "260px" }}>
+              <label className="form-label">Select Student Record ({filteredStudents.length} matches)</label>
               <select
                 className="form-select"
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
               >
-                {studentsList.map((s) => (
+                {filteredStudents.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.studentNumber} - {s.user.lastName}, {s.user.firstName} ({s.program.code})
                   </option>
                 ))}
               </select>
             </div>
-            <div style={{ paddingTop: "24px" }}>
+
+            <div>
               <Button
                 variant="outline"
                 size="md"
@@ -206,16 +259,55 @@ export const AcademicRecordView: React.FC<AcademicRecordViewProps> = ({ initialS
             </div>
           </div>
 
+          {/* Search bar inside transcript */}
+          <div className="card" style={{ padding: "16px 20px" }}>
+            <div style={{ display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: "260px", position: "relative" }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search transcript by course code, title, instructor, or term..."
+                  value={recordSearch}
+                  onChange={(e) => setRecordSearch(e.target.value)}
+                  style={{ paddingLeft: "38px" }}
+                />
+                <Search
+                  size={16}
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+              {recordSearch && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setRecordSearch("")}
+                >
+                  Clear Search
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Academic Terms Grouped Breakdown */}
-          {record.academicTerms.length === 0 ? (
+          {filteredTerms.length === 0 ? (
             <div className="card">
               <EmptyState
-                title="No Term Records Found"
-                description="This student has no finalized term grades recorded in the system yet."
+                title={recordSearch ? "No Courses Found" : "No Term Records Found"}
+                description={
+                  recordSearch
+                    ? `No courses or terms match '${recordSearch}'.`
+                    : "This student has no finalized term grades recorded in the system yet."
+                }
               />
             </div>
           ) : (
-            record.academicTerms.map((termGroup) => (
+            filteredTerms.map((termGroup) => (
               <div key={termGroup.term.id} className="card">
                 <div className="card-header">
                   <div>

@@ -6,19 +6,67 @@ export class GradeRepository {
     skip: number;
     take: number;
     offeringId?: string;
+    courseId?: string;
     studentId?: string;
     remarks?: GradeRemark;
     isFinalized?: boolean;
+    search?: string;
     sort?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }) {
+    const enrollmentWhere: Prisma.EnrollmentWhereInput = {
+      ...(params.offeringId && { courseOfferingId: params.offeringId }),
+      ...(params.studentId && { studentId: params.studentId }),
+      ...(params.courseId && { courseOffering: { courseId: params.courseId } }),
+    };
+
     const where: Prisma.GradeWhereInput = {
-      ...(params.offeringId && { enrollment: { courseOfferingId: params.offeringId } }),
-      ...(params.studentId && { enrollment: { studentId: params.studentId } }),
+      ...(Object.keys(enrollmentWhere).length > 0 && { enrollment: enrollmentWhere }),
       ...(params.remarks && { remarks: params.remarks }),
       ...(params.isFinalized !== undefined && { isFinalized: params.isFinalized }),
     };
+
+    if (params.search && params.search.trim() !== "") {
+      const q = params.search.trim();
+      where.OR = [
+        {
+          enrollment: {
+            student: {
+              studentNumber: { contains: q, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          enrollment: {
+            student: {
+              user: { firstName: { contains: q, mode: "insensitive" } },
+            },
+          },
+        },
+        {
+          enrollment: {
+            student: {
+              user: { lastName: { contains: q, mode: "insensitive" } },
+            },
+          },
+        },
+        {
+          enrollment: {
+            courseOffering: {
+              course: { code: { contains: q, mode: "insensitive" } },
+            },
+          },
+        },
+        {
+          enrollment: {
+            courseOffering: {
+              course: { title: { contains: q, mode: "insensitive" } },
+            },
+          },
+        },
+      ];
+    }
 
     let orderBy: Prisma.GradeOrderByWithRelationInput = { updatedAt: "desc" };
     const sortField = params.sortBy || params.sort;

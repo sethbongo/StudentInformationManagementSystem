@@ -5,7 +5,9 @@ import { Grade } from "../types/entities";
 export const gradeService = {
   async listGrades(params?: {
     offering_id?: string;
+    course_id?: string;
     student_id?: string;
+    search?: string;
     remarks?: string;
     is_finalized?: boolean;
     page?: number;
