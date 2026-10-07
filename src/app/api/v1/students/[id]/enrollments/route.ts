@@ -14,6 +14,12 @@ const paramsSchema = z.object({
 export const GET = apiHandler(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const currentUser = getAuthUser(req);
   const { id } = await validateParams(paramsSchema, params);
+
+  if (currentUser.role === "STUDENT" && currentUser.studentId !== id) {
+    const { ForbiddenError } = await import("@/common/errors/http-errors");
+    throw new ForbiddenError("You are not authorized to view another student's enrollments");
+  }
+
   const query = validateQuery(enrollmentQuerySchema, req);
 
   const { enrollments, total, page, limit } = await EnrollmentService.listEnrollments(
